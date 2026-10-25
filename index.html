@@ -452,7 +452,7 @@
         let config = {
             pollInterval: parseInt(localStorage.getItem('poll_interval')) || 10,
             frostMode: localStorage.getItem('frost_mode') === 'true',
-            isDemo: false
+            isDemo: localStorage.getItem('is_demo') === 'true'
         };
 
         let sensorTimeframes = {};
@@ -480,6 +480,10 @@
 
         frostModeToggle.checked = config.frostMode;
         intervalSelect.value = config.pollInterval;
+        if (config.isDemo) {
+            demoToggleBtn.textContent = 'Demo Mode Uitschakelen';
+            demoToggleBtn.style.background = '#475569';
+        }
 
         let chartsRegistry = {};
 
