@@ -249,10 +249,10 @@
             height: 100% !important;
         }
 
-        .grid-2 {
+        .grid-3 {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
             margin-bottom: 16px;
         }
 
@@ -260,12 +260,13 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 12px;
-            padding: 14px;
+            padding: 12px 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            text-align: center;
         }
 
         .metric-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -274,12 +275,12 @@
         }
 
         .metric-value {
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             font-weight: 700;
         }
 
         .metric-sub {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             margin-top: 2px;
         }
@@ -388,16 +389,21 @@
 
     <!-- Buiten & Vochtverschil -->
     <div class="section-title">Buitencondities & Spui-Advies</div>
-    <div class="grid-2">
+    <div class="grid-3">
         <div class="metric-card">
-            <div class="metric-label">Buiten (Schiermonn.)</div>
+            <div class="metric-label">Buitenlucht</div>
             <div class="metric-value" id="outdoorTemp">-- °C</div>
             <div class="metric-sub" id="outdoorHumi">RLV: --%</div>
         </div>
+        <div class="metric-card" style="border: 1px solid var(--accent-blue);">
+            <div class="metric-label" style="color: var(--accent-blue);">Dauwpunt Buiten</div>
+            <div class="metric-value" id="outdoorDewPoint" style="color: var(--accent-blue);">-- °C</div>
+            <div class="metric-sub">Schiermonn.</div>
+        </div>
         <div class="metric-card">
             <div class="metric-label">Spui-Status</div>
-            <div class="metric-value" id="ventStatus" style="font-size: 1rem; margin-top: 4px;">Wachten...</div>
-            <div class="metric-sub" id="absoluteDiff">Vochtverschil: --</div>
+            <div class="metric-value" id="ventStatus" style="font-size: 0.95rem; margin-top: 4px;">Wachten...</div>
+            <div class="metric-sub" id="absoluteDiff">Vocht: --</div>
         </div>
     </div>
 
@@ -463,6 +469,7 @@
         const goveeCardsContainer = document.getElementById('goveeCardsContainer');
         const outdoorTempEl = document.getElementById('outdoorTemp');
         const outdoorHumiEl = document.getElementById('outdoorHumi');
+        const outdoorDewPointEl = document.getElementById('outdoorDewPoint');
         const absoluteDiffEl = document.getElementById('absoluteDiff');
         const ventStatusEl = document.getElementById('ventStatus');
         const frostModeToggle = document.getElementById('frostModeToggle');
@@ -613,7 +620,6 @@
                 console.warn('Fout bij ophalen Govee live data via proxy', err);
             }
 
-            // Fallback met alle 3 de ruimtes ingebouwd
             if (sensors.length === 0) {
                 sensors = [
                     { id: 'fb1', name: 'Woonkamer', temp: 19.4, humidity: 61.5, history: generateDemoHistory(11.5) },
@@ -727,8 +733,11 @@
 
             let tOut = outdoor.temp;
             let hOut = outdoor.humidity;
+            let dpOut = calculateDewPoint(tOut, hOut);
+
             outdoorTempEl.textContent = tOut.toFixed(1) + ' °C';
             outdoorHumiEl.textContent = 'RLV: ' + hOut.toFixed(0) + '%';
+            outdoorDewPointEl.textContent = dpOut.toFixed(1) + ' °C';
 
             goveeCardsContainer.innerHTML = '';
             let maxDpIn = 0;
@@ -756,13 +765,13 @@
             const absOut = calculateAbsoluteHumidity(tOut, hOut);
             const diff = absIn - absOut;
 
-            absoluteDiffEl.textContent = 'Vochtverschil: ' + (diff > 0 ? '+' : '') + diff.toFixed(1) + ' g/m³';
+            absoluteDiffEl.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1) + ' g/m³';
 
             if (diff > 0.5 && hOut < 85) {
-                ventStatusEl.textContent = '🟢 Spuien Effectief';
+                ventStatusEl.textContent = '🟢 Effectief';
                 ventStatusEl.style.color = 'var(--accent-green)';
             } else {
-                ventStatusEl.textContent = '🔴 Buiten te vochtig';
+                ventStatusEl.textContent = '🔴 Te vochtig';
                 ventStatusEl.style.color = 'var(--accent-red)';
             }
 
