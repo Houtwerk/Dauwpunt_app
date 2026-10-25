@@ -17,17 +17,27 @@ exports.handler = async function(event, context) {
         let devicesList = devData?.data || devData?.payload?.devices || [];
 
         for (let dev of devicesList) {
-            const deviceId = dev.device || dev.sku;
+            const deviceId = dev.device;
             const sku = dev.sku;
             
             try {
-                const stateUrl = `https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${deviceId}&sku=${sku}`;
-                const stateResponse = await fetch(stateUrl, { headers });
+                // Govee vereist een POST-aanvraag met body om de status op te vragen
+                const bodyData = {
+                    requestId: "req_" + Date.now(),
+                    payload: {
+                        sku: sku,
+                        device: deviceId
+                    }
+                };
+
+                const stateResponse = await fetch('https://openapi.api.govee.com/router/api/v1/user/devices/state', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(bodyData)
+                });
                 const stateData = await stateResponse.json();
                 
                 let t = 20, h = 50;
-                
-                // Zoek op alle mogelijke plekken naar capabilities
                 let capabilities = [];
                 if (stateData?.payload?.capabilities) capabilities = stateData.payload.capabilities;
                 else if (stateData?.data?.capabilities) capabilities = stateData.data.capabilities;
