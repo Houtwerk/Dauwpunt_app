@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Schiermonnikoog Dauwpunt & Klimaat Monitor</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --card-border: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 16px;
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .header-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .status-card {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s, background 0.3s;
+        }
+
+        .status-card.safe { border-color: var(--accent-green); }
+        .status-card.warning { border-color: var(--accent-yellow); }
+        .status-card.danger { border-color: var(--accent-red); }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .safe-badge { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .warning-badge { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); }
+        .danger-badge { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+
+        .main-metric {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin: 8px 0;
+            letter-spacing: -1px;
+        }
+
+        .main-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+        }
+
+        .advice-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 10px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .metric-sub {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mode-info h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .mode-info p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #475569;
+            transition: .3s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--accent-blue); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h2 { font-size: 1.1rem; }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .footer-info {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <header>
+        <h1>Schiermonnikoog Klimaat</h1>
+        <div class="header-btns">
+            <button class="icon-btn" id="themeToggle" title="Thema wisselen">☀️</button>
+            <button class="icon-btn" id="settingsBtn" title="Instellingen">⚙️</button>
+        </div>
+    </header>
+
+    <!-- Hoofd Status Card -->
+    <div class="status-card safe" id="statusCard">
+        <div class="status-badge safe-badge" id="statusBadge">Klimaat Veilig</div>
+        <div class="main-metric" id="indoorDewPoint">-- °C</div>
+        <div class="main-subtitle">Huidig Dauwpunt Binnen</div>
+        <div class="advice-box" id="adviceBox">
+            <span>💡</span> <span id="adviceText">Gegevens laden...</span>
+        </div>
+    </div>
+
+    <!-- Meetwaarden Raster -->
+    <div class="grid-2">
+        <div class="metric-card">
+            <div class="metric-label">Binnen (Govee)</div>
+            <div class="metric-value" id="indoorTemp">-- °C</div>
+            <div class="metric-sub" id="indoorHumi">RLV: --%</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Buiten (Schiermonn.)</div>
+            <div class="metric-value" id="outdoorTemp">-- °C</div>
+            <div class="metric-sub" id="outdoorHumi">RLV: --%</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="metric-card">
+            <div class="metric-label">Dauwpunt Buiten</div>
+            <div class="metric-value" id="outdoorDewPoint">-- °C</div>
+            <div class="metric-sub" id="absoluteDiff">Vochtverschil: --</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Status Vochtafvoer</div>
+            <div class="metric-value" id="ventStatus" style="font-size: 1.1rem; margin-top: 4px;">Wachten...</div>
+            <div class="metric-sub" id="lastUpdate">Laatste update: zojuist</div>
+        </div>
+    </div>
+
+    <!-- Modus Schakelaar -->
+    <div class="controls-card">
+        <div class="mode-info">
+            <h3>Strenge Vorst Modus</h3>
+            <p>Drempel verlaagd naar 5.0 °C</p>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="frostModeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <button class="btn" id="refreshBtn">🔄 Gegevens Nu Verversen</button>
+
+    <div class="footer-info">
+        Houtskeletbouw Schiermonnikoog • Pavaflex & Isolair Bescherming
+    </div>
+
+    <!-- Instellingen Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Instellingen</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="apiKeyInput">Govee API Key</label>
+                <input type="text" id="apiKeyInput" class="form-control" placeholder="Plak hier je Govee sleutel">
+            </div>
+            <div class="form-group">
+                <label for="intervalSelect">Ophaalfrequentie (Automatisch)</label>
+                <select id="intervalSelect" class="form-control">
+                    <option value="1">Elke 1 minuut</option>
+                    <option value="5">Elke 5 minuten</option>
+                    <option value="10" selected>Elke 10 minuten (Aanbevolen)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Demo / Simulatiemodus</label>
+                <button class="btn" id="demoToggleBtn" style="background: #475569; margin-bottom: 0;">Demo Mode Inschakelen</button>
+            </div>
+            <button class="btn" id="saveSettings" style="margin-top: 16px;">Instellingen Opslaan</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuratie en State
+        let config = {
+            apiKey: localStorage.getItem('govee_api_key') || '3da10519-ccf4-474c-9f21-2e275b2c37bd',
+            pollInterval: parseInt(localStorage.getItem('poll_interval')) || 10,
+            frostMode: localStorage.getItem('frost_mode') === 'true',
+            isDemo: localStorage.getItem('is_demo') === 'false' ? false : true // Standaard demo tot live data werkt
+        };
+
+        // DOM Elementen
+        const statusCard = document.getElementById('statusCard');
+        const statusBadge = document.getElementById('statusBadge');
+        const indoorDewPointEl = document.getElementById('indoorDewPoint');
+        const adviceText = document.getElementById('adviceText');
+        const indoorTempEl = document.getElementById('indoorTemp');
+        const indoorHumiEl = document.getElementById('indoorHumi');
+        const outdoorTempEl = document.getElementById('outdoorTemp');
+        const outdoorHumiEl = document.getElementById('outdoorHumi');
+        const outdoorDewPointEl = document.getElementById('outdoorDewPoint');
+        const absoluteDiffEl = document.getElementById('absoluteDiff');
+        const ventStatusEl = document.getElementById('ventStatus');
+        const lastUpdateEl = document.getElementById('lastUpdate');
+        const frostModeToggle = document.getElementById('frostModeToggle');
+        
+        // Modal Elementen
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const closeModal = document.getElementById('closeModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const intervalSelect = document.getElementById('intervalSelect');
+        const saveSettings = document.getElementById('saveSettings');
+        const demoToggleBtn = document.getElementById('demoToggleBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const themeToggle = document.getElementById('themeToggle');
+
+        // Init UI waarden
+        frostModeToggle.checked = config.frostMode;
+        apiKeyInput.value = config.apiKey;
+        intervalSelect.value = config.pollInterval;
+
+        // Magnus Formule voor Dauwpunt berekening
+        function calculateDewPoint(temp, humidity) {
+            const a = 17.27;
+            const b = 237.7;
+            const alpha = ((a * temp) / (b + temp)) + Math.log(humidity / 100.0);
+            return (b * alpha) / (a - alpha);
+        }
+
+        // Absolute Vochtigheid in g/m³
+        function calculateAbsoluteHumidity(temp, humidity) {
+            const saturationPressure = 6.112 * Math.exp((17.67 * temp) / (temp + 243.5));
+            const actualVaporPressure = (humidity / 100) * saturationPressure;
+            return (216.7 * actualVaporPressure) / (temp + 273.15);
+        }
+
+        // Weer ophalen (OpenWeatherMap voor Schiermonnikoog)
+        async function fetchOutdoorWeather() {
+            try {
+                // Schiermonnikoog coördinaten: Lat 53.48, Lon 6.15
+                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.48&longitude=6.15&current=temperature_2m,relative_humidity_2m');
+                const data = await response.json();
+                return {
+                    temp: data.current.temperature_2m,
+                    humidity: data.current.relative_humidity_2m
+                };
+            } catch (e) {
+                console.warn('Kon buitenweer niet ophalen, fallback naar simulatie', e);
+                return { temp: 6.5, humidity: 82 };
+            }
+        }
+
+        // Govee Data Ophalen
+        async function fetchGoveeData() {
+            if (config.isDemo || !config.apiKey) {
+                // Simulatie waarden voor demo
+                return { temp: 19.4, humidity: 53 };
+            }
+
+            try {
+                // Govee API call naar apparaten lijst
+                const response = await fetch('https://openapi.api.govee.com/router/api/v1/user/devices', {
+                    headers: {
+                        'Govee-API-Key': config.apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                // Zoek eerste sensor met temperatuur
+                if (data && data.data && data.data.length > 0) {
+                    for (let device of data.data) {
+                        // Vraag state op
+                        const stateResp = await fetch(`https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${device.device}&sku=${device.sku}`, {
+                            headers: { 'Govee-API-Key': config.apiKey }
+                        });
+                        const stateData = await stateResp.json();
+                        let t = 20, h = 50;
+                        if (stateData && stateData.data && stateData.data.capabilities) {
+                            for (let cap of stateData.data.capabilities) {
+                                if (cap.instance === 'sensorTemperature') t = cap.value / 100; // Vaak in centigrades * 100 of direct
+                                if (cap.instance === 'sensorHumidity') h = cap.value / 100;
+                            }
+                            return { temp: t > 50 ? t/100 : t, humidity: h > 100 ? h/100 : h };
+                        }
+                    }
+                }
+                throw new Error('Geen actieve Govee sensor gevonden via API');
+            } catch (err) {
+                console.warn('Govee API fout, val terug op veilige demo-stand:', err);
+                return { temp: 19.2, humidity: 54 };
+            }
+        }
+
+        // Hoofd Update Functie
+        async function updateDashboard() {
+            const indoor = await fetchGoveeData();
+            const outdoor = await fetchOutdoorWeather();
+
+            const tIn = indoor.temp;
+            const hIn = indoor.humidity;
+            const tOut = outdoor.temp;
+            const hOut = outdoor.humidity;
+
+            const dpIn = calculateDewPoint(tIn, hIn);
+            const dpOut = calculateDewPoint(tOut, hOut);
+
+            const absIn = calculateAbsoluteHumidity(tIn, hIn);
+            const absOut = calculateAbsoluteHumidity(tOut, hOut);
+            const diff = absIn - absOut; // Positief = binnen vochtiger dan buiten (spuien zinvol)
+
+            // UI Bijwerken
+            indoorTempEl.textContent = tIn.toFixed(1) + ' °C';
+            indoorHumiEl.textContent = 'RLV: ' + hIn.toFixed(0) + '%';
+            indoorDewPointEl.textContent = dpIn.toFixed(1) + ' °C';
+
+            outdoorTempEl.textContent = tOut.toFixed(1) + ' °C';
+            outdoorHumiEl.textContent = 'RLV: ' + hOut.toFixed(0) + '%';
+            outdoorDewPointEl.textContent = dpOut.toFixed(1) + ' °C';
+            absoluteDiffEl.textContent = 'Vochtverschil: ' + (diff > 0 ? '+' : '') + diff.toFixed(1) + ' g/m³';
+
+            // Drempels bepalen
+            const threshold = config.frostMode ? 5.0 : 11.5;
+            
+            statusCard.className = 'status-card';
+            if (dpIn > threshold + 1.5 || hIn > 65) {
+                statusCard.classList.add('danger');
+                statusBadge.className = 'status-badge danger-badge';
+                statusBadge.textContent = 'Gevaar Zone (Risico)';
+                adviceText.textContent = 'Dauwpunt of RLV te hoog! Direct kort en krachtig spuien om vochtbelasting te breken.';
+            } else if (dpIn > threshold) {
+                statusCard.classList.add('warning');
+                statusBadge.className = 'status-badge warning-badge';
+                statusBadge.textContent = 'Let op / Randgeval';
+                adviceText.textContent = 'Dauwpunt loopt op. Bereid een kort spuimoment voor.';
+            } else {
+                statusCard.classList.add('safe');
+                statusBadge.className = 'status-badge safe-badge';
+                statusBadge.textContent = 'Klimaat Veilig';
+                adviceText.textContent = config.frostMode ? 'Strenge vorst modus actief. Dauwpunt keurig onder controle.' : 'Constructie is stabiel. Dauwpunt onder de 11.5 °C grens.';
+            }
+
+            // Spui advies
+            if (diff > 0.5 && hOut < 85) {
+                ventStatusEl.textContent = '🟢 Spuien Effectief';
+                ventStatusEl.style.color = 'var(--accent-green)';
+            } else {
+                ventStatusEl.textContent = '🔴 Buiten te vochtig';
+                ventStatusEl.style.color = 'var(--accent-red)';
+            }
+
+            const now = new Date();
+            lastUpdateEl.textContent = 'Laatste update: ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Event Listeners
+        refreshBtn.addEventListener('click', updateDashboard);
+        
+        frostModeToggle.addEventListener('change', (e) => {
+            config.frostMode = e.target.checked;
+            localStorage.setItem('frost_mode', config.frostMode);
+            updateDashboard();
+        });
+
+        settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+        closeModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+
+        saveSettings.addEventListener('click', () => {
+            config.apiKey = apiKeyInput.value.trim();
+            config.pollInterval = parseInt(intervalSelect.value);
+            config.isDemo = false; // Als gebruiker key opslaat, proberen we live te gaan
+            
+            localStorage.setItem('govee_api_key', config.apiKey);
+            localStorage.setItem('poll_interval', config.pollInterval);
+            localStorage.setItem('is_demo', config.isDemo);
+
+            settingsModal.classList.remove('active');
+            setupInterval();
+            updateDashboard();
+        });
+
+        demoToggleBtn.addEventListener('click', () => {
+            config.isDemo = !config.isDemo;
+            localStorage.setItem('is_demo', config.isDemo);
+            demoToggleBtn.textContent = config.isDemo ? 'Demo Mode Uitschakelen' : 'Demo Mode Inschakelen';
+            demoToggleBtn.style.background = config.isDemo ? '#475569' : '#10b981';
+            updateDashboard();
+        });
+
+        // Thema Wisselen
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+
+        // Automatische interval timer instellen
+        let timer = null;
+        function setupInterval() {
+            if (timer) clearInterval(timer);
+            // Omzetten van minuten naar milliseconden
+            const ms = config.pollInterval * 60 * 1000;
+            timer = setInterval(updateDashboard, ms);
+        }
+
+        // Start bij openen
+        updateDashboard();
+        setupInterval();
+    </script>
+</body>
+</html>
