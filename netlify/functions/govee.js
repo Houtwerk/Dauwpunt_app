@@ -7,49 +7,62 @@ exports.handler = async function(event, context) {
         };
     }
 
-    const headers = { 'Govee-API-Key': apiKey };
+    const headers = { 'Govee-API-Key': apiKey, 'Content-Type': 'application/json' };
 
     try {
         const devResponse = await fetch('https://openapi.api.govee.com/router/api/v1/user/devices', { headers });
         const devData = await devResponse.json();
         
         let sensors = [];
-        if (devData && devData.data) {
-            for (let dev of devData.data) {
-                try {
-                    const stateUrl = `https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${dev.device}&sku=${dev.sku}`;
-                    const stateResponse = await fetch(stateUrl, { headers });
-                    const stateData = await stateResponse.json();
-                    
-                    let t = 20, h = 50;
-                    const capabilities = stateData?.payload?.capabilities || stateData?.data?.capabilities || [];
-                    
-                    for (let cap of capabilities) {
-                        const val = cap.state?.value !== undefined ? cap.state.value : cap.value;
-                        if (val !== undefined) {
-                            if (cap.instance === 'sensorTemperature' || cap.instance === 'temperature') {
-                                t = val > 60 ? val / 100 : val;
-                            }
-                            if (cap.instance === 'sensorHumidity' || cap.instance === 'humidity') {
-                                h = val > 100 ? val / 100 : val;
-                            }
+        let devicesList = devData?.data || devData?.payload?.devices || [];
+
+        for (let dev of devicesList) {
+            const deviceId = dev.device || dev.sku;
+            const sku = dev.sku;
+            
+            try {
+                const stateUrl = `https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${deviceId}&sku=${sku}`;
+                const stateResponse = await fetch(stateUrl, { headers });
+                const stateData = await stateResponse.json();
+                
+                let t = 20, h = 50;
+                
+                // Zoek op alle mogelijke plekken naar capabilities
+                let capabilities = [];
+                if (stateData?.payload?.capabilities) capabilities = stateData.payload.capabilities;
+                else if (stateData?.data?.capabilities) capabilities = stateData.data.capabilities;
+                else if (Array.isArray(stateData?.capabilities)) capabilities = stateData.capabilities;
+
+                for (let cap of capabilities) {
+                    let val = undefined;
+                    if (cap?.state?.value !== undefined) val = cap.state.value;
+                    else if (cap?.value !== undefined) val = cap.value;
+                    else if (cap?.parameters?.value !== undefined) val = cap.parameters.value;
+
+                    if (val !== undefined) {
+                        const inst = (cap.instance || cap.type || '').toLowerCase();
+                        if (inst.includes('temperature') || inst.includes('sensortemperature')) {
+                            t = val > 60 ? val / 100 : val;
+                        }
+                        if (inst.includes('humidity') || inst.includes('sensorhumidity')) {
+                            h = val > 100 ? val / 100 : val;
                         }
                     }
-
-                    let rawName = dev.deviceName || 'Govee Sensor';
-                    if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
-                        rawName = 'Badkamer';
-                    }
-
-                    sensors.push({
-                        id: dev.device,
-                        name: rawName,
-                        temp: t,
-                        humidity: h
-                    });
-                } catch (err) {
-                    console.error(`Fout bij sensor ${dev.device}:`, err);
                 }
+
+                let rawName = dev.deviceName || dev.name || 'Govee Sensor';
+                if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
+                    rawName = 'Badkamer';
+                }
+
+                sensors.push({
+                    id: deviceId,
+                    name: rawName,
+                    temp: t,
+                    humidity: h
+                });
+            } catch (err) {
+                console.error(`Fout bij ophalen status voor apparaat ${deviceId}:`, err);
             }
         }
 
