@@ -433,10 +433,6 @@
                 <button class="close-btn" id="closeModal">&times;</button>
             </div>
             <div class="form-group">
-                <label for="apiKeyInput">Govee API Key</label>
-                <input type="text" id="apiKeyInput" class="form-control" placeholder="Plak hier je Govee sleutel">
-            </div>
-            <div class="form-group">
                 <label for="intervalSelect">Ophaalfrequentie (Automatisch)</label>
                 <select id="intervalSelect" class="form-control">
                     <option value="1">Elke 1 minuut</option>
@@ -454,7 +450,6 @@
 
     <script>
         let config = {
-            apiKey: localStorage.getItem('govee_api_key') || '3da10519-ccf4-474c-9f21-2e275b2c37bd',
             pollInterval: parseInt(localStorage.getItem('poll_interval')) || 10,
             frostMode: localStorage.getItem('frost_mode') === 'true',
             isDemo: false
@@ -477,7 +472,6 @@
         const settingsModal = document.getElementById('settingsModal');
         const settingsBtn = document.getElementById('settingsBtn');
         const closeModal = document.getElementById('closeModal');
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const intervalSelect = document.getElementById('intervalSelect');
         const saveSettings = document.getElementById('saveSettings');
         const demoToggleBtn = document.getElementById('demoToggleBtn');
@@ -485,7 +479,6 @@
         const themeToggle = document.getElementById('themeToggle');
 
         frostModeToggle.checked = config.frostMode;
-        apiKeyInput.value = config.apiKey;
         intervalSelect.value = config.pollInterval;
 
         let chartsRegistry = {};
@@ -561,39 +554,19 @@
             }
         }
 
-        async function fetchWithFallbackProxy(targetUrl) {
-            const cb = new Date().getTime();
-            const urlWithCb = targetUrl + (targetUrl.includes('?') ? '&' : '?') + `cb=${cb}`;
-            
-            try {
-                const p1 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlWithCb)}`);
-                const res1 = await p1.json();
-                if (res1 && res1.contents) {
-                    return JSON.parse(res1.contents);
-                }
-            } catch(e) {}
-
-            try {
-                const p2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(urlWithCb)}`, {
-                    headers: { 'Govee-API-Key': config.apiKey }
-                });
-                const res2 = await p2.json();
-                if (res2) return res2;
-            } catch(e) {}
-
-            return null;
-        }
-
         async function fetchGoveeSensors() {
             let sensors = [];
             
-            if (!config.isDemo && config.apiKey) {
+            if (!config.isDemo) {
                 try {
-                    const devData = await fetchWithFallbackProxy('https://openapi.api.govee.com/router/api/v1/user/devices');
+                    // Haalt direct de data op via Netlify's eigen beveiligde serverless function
+                    const response = await fetch('/.netlify/functions/govee');
+                    const devicesRaw = await response.json();
                     
-                    if (devData && devData.data && devData.data.length > 0) {
-                        for (let dev of devData.data) {
-                            const stateData = await fetchWithFallbackProxy(`https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${dev.device}&sku=${dev.sku}`);
+                    if (Array.isArray(devicesRaw) && devicesRaw.length > 0) {
+                        for (let item of devicesRaw) {
+                            let dev = item.device;
+                            let stateData = item.state;
                             
                             let t = 20, h = 50;
                             if (stateData && stateData.payload && stateData.payload.capabilities) {
@@ -629,7 +602,7 @@
                         }
                     }
                 } catch (err) {
-                    console.warn('Geen live verbinding', err);
+                    console.warn('Fout bij ophalen via Netlify functie', err);
                 }
             }
 
@@ -645,7 +618,6 @@
         }
 
         function renderGoveeCard(sensor) {
-            // Neem het dauwpunt rechtstreeks over van het meest recente punt in de grafiek/historie
             const dp = sensor.history.length > 0 ? sensor.history[sensor.history.length - 1].dp : calculateDewPoint(sensor.temp, sensor.humidity);
             let threshold = config.frostMode ? 5.0 : 11.5;
             let isCrit = dp > threshold;
@@ -823,11 +795,9 @@
         closeModal.addEventListener('click', () => settingsModal.classList.remove('active'));
 
         saveSettings.addEventListener('click', () => {
-            config.apiKey = apiKeyInput.value.trim();
             config.pollInterval = parseInt(intervalSelect.value);
             config.isDemo = false;
             
-            localStorage.setItem('govee_api_key', config.apiKey);
             localStorage.setItem('poll_interval', config.pollInterval);
             localStorage.setItem('is_demo', config.isDemo);
 
