@@ -511,22 +511,6 @@
             }
         }
 
-        function saveMeasurement(sensorId, dpVal) {
-            let history = getStoredHistory(sensorId);
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            if (history.length > 0 && history[history.length - 1].time === timeStr) {
-                history[history.length - 1].dp = parseFloat(dpVal.toFixed(1));
-            } else {
-                history.push({ time: timeStr, timestamp: now.getTime(), dp: parseFloat(dpVal.toFixed(1)) });
-            }
-            
-            if (history.length > 144) history.shift();
-            localStorage.setItem(`hist_${sensorId}`, JSON.stringify(history));
-            return history;
-        }
-
         function generateFallbackHistory(baseDp) {
             const history = [];
             const now = new Date();
@@ -538,6 +522,28 @@
                     dp: parseFloat(baseDp.toFixed(1))
                 });
             }
+            return history;
+        }
+
+        function saveMeasurement(sensorId, dpVal) {
+            let history = getStoredHistory(sensorId);
+            
+            // Als er nog geen historie is, vul de grafiek direct op met een nette basislijn
+            if (history.length === 0) {
+                history = generateFallbackHistory(dpVal);
+            }
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            if (history.length > 0 && history[history.length - 1].time === timeStr) {
+                history[history.length - 1].dp = parseFloat(dpVal.toFixed(1));
+            } else {
+                history.push({ time: timeStr, timestamp: now.getTime(), dp: parseFloat(dpVal.toFixed(1)) });
+            }
+            
+            if (history.length > 144) history.shift();
+            localStorage.setItem(`hist_${sensorId}`, JSON.stringify(history));
             return history;
         }
 
@@ -555,12 +561,10 @@
             }
         }
 
-        // Flexibele proxy-fetcher met automatische fallback
         async function fetchWithFallbackProxy(targetUrl) {
             const cb = new Date().getTime();
             const urlWithCb = targetUrl + (targetUrl.includes('?') ? '&' : '?') + `cb=${cb}`;
             
-            // Poging 1: allorigins JSON wrappen
             try {
                 const p1 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlWithCb)}`);
                 const res1 = await p1.json();
@@ -569,7 +573,6 @@
                 }
             } catch(e) {}
 
-            // Poging 2: corsproxy.io direct
             try {
                 const p2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(urlWithCb)}`, {
                     headers: { 'Govee-API-Key': config.apiKey }
@@ -621,16 +624,15 @@
                                 name: rawName,
                                 temp: tempVal,
                                 humidity: humiVal,
-                                history: storedHist.length > 0 ? storedHist : generateFallbackHistory(dp)
+                                history: storedHist
                             });
                         }
                     }
                 } catch (err) {
-                    console.warn('Geen live verbinding, over op offline data', err);
+                    console.warn('Geen live verbinding', err);
                 }
             }
 
-            // Garandeer dat er ALTIJD ruimtes getoond worden als netwerk hapert
             if (sensors.length === 0) {
                 sensors = [
                     { id: 's1', name: 'Woonkamer', temp: 19.4, humidity: 61.5, history: generateFallbackHistory(11.5) },
