@@ -20,12 +20,13 @@ exports.handler = async function(event, context) {
             const deviceId = dev.device;
             const sku = dev.sku;
             let rawName = dev.deviceName || dev.name || 'Govee Sensor';
+            
             if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
                 rawName = 'Badkamer';
             }
 
-            let t = 20; // Standaard fallback
-            let h = 50; // Standaard fallback
+            let t = 19.5; // Veilige fallback temperatuur in Celsius
+            let h = 60.0; // Veilige fallback luchtvochtigheid
 
             try {
                 const bodyData = {
@@ -47,11 +48,17 @@ exports.handler = async function(event, context) {
 
                 for (let cap of capabilities) {
                     let val = cap?.state?.value ?? cap?.value ?? cap?.parameters?.value;
-                    if (val !== undefined && val !== null && val !== '') {
+                    if (val !== undefined && val !== null && val !== '' && !isNaN(val)) {
                         const inst = (cap.instance || cap.type || '').toLowerCase();
                         if (inst.includes('temp')) {
-                            // Alleen delen door 100 als het een groot getal is (zoals 2000), anders direct gebruiken
-                            t = Number(val) > 200 ? Number(val) / 100 : Number(val);
+                            let numVal = Number(val);
+                            if (numVal > 200) {
+                                t = numVal / 100; // Centi-degrees naar Celsius
+                            } else if (numVal > 45) {
+                                t = (numVal - 32) * 5 / 9; // Fahrenheit naar Celsius omrekenen
+                            } else {
+                                t = numVal; // Al direct Celsius
+                            }
                         }
                         if (inst.includes('humid') || inst.includes('moisture')) {
                             h = Number(val) > 100 ? Number(val) / 100 : Number(val);
@@ -65,8 +72,8 @@ exports.handler = async function(event, context) {
             sensors.push({
                 id: deviceId,
                 name: rawName,
-                temp: typeof t === 'number' && !isNaN(t) ? t : 20,
-                humidity: typeof h === 'number' && !isNaN(h) ? h : 50
+                temp: Number(t.toFixed(1)),
+                humidity: Number(h.toFixed(1))
             });
         }
 
