@@ -545,7 +545,9 @@
 
         async function fetchOutdoorWeather() {
             try {
-                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=53.48&longitude=6.15&current=temperature_2m,relative_humidity_2m');
+                // Cache-buster toegevoegd voor Open-Meteo
+                const cb = new Date().getTime();
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=53.48&longitude=6.15&current=temperature_2m,relative_humidity_2m&cb=${cb}`);
                 const data = await response.json();
                 return {
                     temp: data.current.temperature_2m,
@@ -568,7 +570,9 @@
 
             try {
                 const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                const targetUrl = encodeURIComponent('https://openapi.api.govee.com/router/api/v1/user/devices');
+                // Cache-buster toegevoegd zodat de proxy géén oude data vasthoudt
+                const cb = new Date().getTime();
+                const targetUrl = encodeURIComponent(`https://openapi.api.govee.com/router/api/v1/user/devices?cb=${cb}`);
                 
                 const response = await fetch(proxyUrl + targetUrl, {
                     headers: { 'Govee-API-Key': config.apiKey }
@@ -577,7 +581,7 @@
                 
                 if (data && data.data) {
                     for (let dev of data.data) {
-                        const stateTargetUrl = encodeURIComponent(`https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${dev.device}&sku=${dev.sku}`);
+                        const stateTargetUrl = encodeURIComponent(`https://openapi.api.govee.com/router/api/v1/user/devices/state?device=${dev.device}&sku=${dev.sku}&cb=${cb}`);
                         const stateResp = await fetch(proxyUrl + stateTargetUrl, {
                             headers: { 'Govee-API-Key': config.apiKey }
                         });
