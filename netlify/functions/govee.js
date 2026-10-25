@@ -29,7 +29,8 @@ exports.handler = async function(event, context) {
                     }
                 };
 
-                const stateResponse = await fetch('https://openapi.api.govee.com/router/api/v1/user/devices/state', {
+                // Govee API vereist hier /router/api/v1/device/state (zonder 'user/')
+                const stateResponse = await fetch('https://openapi.api.govee.com/router/api/v1/device/state', {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify(bodyData)
@@ -61,8 +62,7 @@ exports.handler = async function(event, context) {
                     id: deviceId,
                     name: rawName,
                     temp: t,
-                    humidity: h,
-                    rawState: stateData // Dit voegt de ruwe Govee-data toe om te kunnen bekijken
+                    humidity: h
                 });
             } catch (err) {
                 console.error(`Fout bij ophalen status voor apparaat ${deviceId}:`, err);
