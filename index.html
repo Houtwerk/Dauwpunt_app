@@ -451,7 +451,7 @@
             apiKey: localStorage.getItem('govee_api_key') || '3da10519-ccf4-474c-9f21-2e275b2c37bd',
             pollInterval: parseInt(localStorage.getItem('poll_interval')) || 10,
             frostMode: localStorage.getItem('frost_mode') === 'true',
-            isDemo: false // We proberen standaard direct live data op te halen via proxy
+            isDemo: false
         };
 
         let sensorTimeframes = {};
@@ -554,12 +554,12 @@
             if (config.isDemo || !config.apiKey) {
                 return [
                     { id: 's1', name: 'Woonkamer', temp: 19.4, humidity: 61.5, history: generateDemoHistory(11.5) },
-                    { id: 's2', name: 'Slaapkamer', temp: 18.1, humidity: 65.6, history: generateDemoHistory(11.2) }
+                    { id: 's2', name: 'Slaapkamer', temp: 18.1, humidity: 65.6, history: generateDemoHistory(11.2) },
+                    { id: 's3', name: 'Badkamer', temp: 18.2, humidity: 64.0, history: generateDemoHistory(11.0) }
                 ];
             }
 
             try {
-                // Gebruik een CORS-proxy om de Govee API fatsoenlijk te bereiken vanuit de browser
                 const proxyUrl = 'https://api.allorigins.win/raw?url=';
                 const targetUrl = encodeURIComponent('https://openapi.api.govee.com/router/api/v1/user/devices');
                 
@@ -613,11 +613,12 @@
                 console.warn('Fout bij ophalen Govee live data via proxy', err);
             }
 
-            // Als er door een netwerkstoring geen sensoren zijn opgehaald, tonen we een veilige fallback
+            // Fallback met alle 3 de ruimtes ingebouwd
             if (sensors.length === 0) {
                 sensors = [
-                    { id: 'fb1', name: 'Woonkamer (Laatste waarde)', temp: 19.4, humidity: 61.5, history: generateDemoHistory(11.5) },
-                    { id: 'fb2', name: 'Slaapkamer (Laatste waarde)', temp: 18.1, humidity: 65.6, history: generateDemoHistory(11.2) }
+                    { id: 'fb1', name: 'Woonkamer', temp: 19.4, humidity: 61.5, history: generateDemoHistory(11.5) },
+                    { id: 'fb2', name: 'Slaapkamer', temp: 18.1, humidity: 65.6, history: generateDemoHistory(11.2) },
+                    { id: 'fb3', name: 'Badkamer', temp: 18.2, humidity: 64.0, history: generateDemoHistory(11.0) }
                 ];
             }
 
