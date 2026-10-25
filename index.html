@@ -377,7 +377,7 @@
         <div class="status-badge safe-badge" id="statusBadge">Algehele Status: Veilig</div>
         <div class="main-title" id="mainTitleSub">Alle ruimtes binnen veilige marges</div>
         <div class="advice-box" id="adviceBox">
-            <span>💡</span> <span id="adviceText">Live Govee data ophalen...</span>
+            <span>💡</span> <span id="adviceText">Live Govee data ophalen via server...</span>
         </div>
     </div>
 
@@ -559,44 +559,19 @@
             
             if (!config.isDemo) {
                 try {
-                    // Haalt direct de data op via Netlify's eigen beveiligde serverless function
                     const response = await fetch('/.netlify/functions/govee');
-                    const devicesRaw = await response.json();
+                    const data = await response.json();
                     
-                    if (Array.isArray(devicesRaw) && devicesRaw.length > 0) {
-                        for (let item of devicesRaw) {
-                            let dev = item.device;
-                            let stateData = item.state;
-                            
-                            let t = 20, h = 50;
-                            if (stateData && stateData.payload && stateData.payload.capabilities) {
-                                for (let cap of stateData.payload.capabilities) {
-                                    if (cap.instance === 'sensorTemperature' && cap.state) t = cap.state.value;
-                                    if (cap.instance === 'sensorHumidity' && cap.state) h = cap.state.value;
-                                }
-                            } else if (stateData && stateData.data && stateData.data.capabilities) {
-                                for (let cap of stateData.data.capabilities) {
-                                    if (cap.instance === 'sensorTemperature') t = cap.value;
-                                    if (cap.instance === 'sensorHumidity') h = cap.value;
-                                }
-                            }
-
-                            let rawName = dev.deviceName || 'Govee Sensor';
-                            if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
-                                rawName = 'Badkamer';
-                            }
-                            
-                            let tempVal = t > 60 ? t / 100 : t;
-                            let humiVal = h > 100 ? h / 100 : h;
-                            let dp = calculateDewPoint(tempVal, humiVal);
-
-                            let storedHist = saveMeasurement(dev.device, dp);
+                    if (Array.isArray(data) && data.length > 0) {
+                        for (let s of data) {
+                            let dp = calculateDewPoint(s.temp, s.humidity);
+                            let storedHist = saveMeasurement(s.id, dp);
 
                             sensors.push({
-                                id: dev.device,
-                                name: rawName,
-                                temp: tempVal,
-                                humidity: humiVal,
+                                id: s.id,
+                                name: s.name,
+                                temp: s.temp,
+                                humidity: s.humidity,
                                 history: storedHist
                             });
                         }
