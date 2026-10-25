@@ -19,7 +19,14 @@ exports.handler = async function(event, context) {
         for (let dev of devicesList) {
             const deviceId = dev.device;
             const sku = dev.sku;
-            
+            let rawName = dev.deviceName || dev.name || 'Govee Sensor';
+            if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
+                rawName = 'Badkamer';
+            }
+
+            let t = 20; // Standaard fallback
+            let h = 50; // Standaard fallback
+
             try {
                 const bodyData = {
                     requestId: "req_" + Date.now(),
@@ -29,7 +36,6 @@ exports.handler = async function(event, context) {
                     }
                 };
 
-                // Govee API vereist hier /router/api/v1/device/state (zonder 'user/')
                 const stateResponse = await fetch('https://openapi.api.govee.com/router/api/v1/device/state', {
                     method: 'POST',
                     headers: headers,
@@ -37,36 +43,31 @@ exports.handler = async function(event, context) {
                 });
                 const stateData = await stateResponse.json();
                 
-                let t = 20, h = 50;
                 let capabilities = stateData?.payload?.capabilities || stateData?.data?.capabilities || stateData?.capabilities || [];
 
                 for (let cap of capabilities) {
                     let val = cap?.state?.value ?? cap?.value ?? cap?.parameters?.value;
-                    if (val !== undefined) {
+                    if (val !== undefined && val !== null && val !== '') {
                         const inst = (cap.instance || cap.type || '').toLowerCase();
                         if (inst.includes('temp')) {
-                            t = val > 60 ? val / 100 : val;
+                            // Alleen delen door 100 als het een groot getal is (zoals 2000), anders direct gebruiken
+                            t = Number(val) > 200 ? Number(val) / 100 : Number(val);
                         }
                         if (inst.includes('humid') || inst.includes('moisture')) {
-                            h = val > 100 ? val / 100 : val;
+                            h = Number(val) > 100 ? Number(val) / 100 : Number(val);
                         }
                     }
                 }
-
-                let rawName = dev.deviceName || dev.name || 'Govee Sensor';
-                if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
-                    rawName = 'Badkamer';
-                }
-
-                sensors.push({
-                    id: deviceId,
-                    name: rawName,
-                    temp: t,
-                    humidity: h
-                });
             } catch (err) {
                 console.error(`Fout bij ophalen status voor apparaat ${deviceId}:`, err);
             }
+
+            sensors.push({
+                id: deviceId,
+                name: rawName,
+                temp: typeof t === 'number' && !isNaN(t) ? t : 20,
+                humidity: typeof h === 'number' && !isNaN(h) ? h : 50
+            });
         }
 
         return {
