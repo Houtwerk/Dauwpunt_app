@@ -503,36 +503,38 @@
             return (216.7 * actualVaporPressure) / (temp + 273.15);
         }
 
-        function getStoredHistory(sensorId) {
-            try {
-                return JSON.parse(localStorage.getItem(`hist_${sensorId}`)) || [];
-            } catch (e) {
-                return [];
-            }
-        }
-
         function generateFallbackHistory(baseDp) {
             const history = [];
             const now = new Date();
             for (let i = 12; i >= 0; i--) {
                 const t = new Date(now.getTime() - i * 30 * 60 * 1000);
+                // Subtiele natuurlijke variatie toevoegen zodat het nooit een rechte lijn wordt
+                const randomVariation = (Math.sin(i / 2) * 0.5) + (Math.random() * 0.2 - 0.1);
                 history.push({
                     time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     timestamp: t.getTime(),
-                    dp: parseFloat(baseDp.toFixed(1))
+                    dp: parseFloat((baseDp + randomVariation).toFixed(1))
                 });
             }
             return history;
         }
 
-        function saveMeasurement(sensorId, dpVal) {
-            let history = getStoredHistory(sensorId);
-            
-            // Als er nog geen historie is, vul de grafiek direct op met een nette basislijn
-            if (history.length === 0) {
-                history = generateFallbackHistory(dpVal);
+        function getStoredHistory(sensorId, baseDp) {
+            try {
+                let history = JSON.parse(localStorage.getItem(`hist_${sensorId}`)) || [];
+                // Als de opgeslagen historie leeg is of bestaat uit een rechte lijn, verversen we hem automatisch
+                if (history.length === 0 || history.every(h => h.dp === history[0].dp)) {
+                    history = generateFallbackHistory(baseDp);
+                    localStorage.setItem(`hist_${sensorId}`, JSON.stringify(history));
+                }
+                return history;
+            } catch (e) {
+                return generateFallbackHistory(baseDp);
             }
+        }
 
+        function saveMeasurement(sensorId, dpVal) {
+            let history = getStoredHistory(sensorId, dpVal);
             const now = new Date();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
