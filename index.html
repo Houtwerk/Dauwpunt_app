@@ -508,8 +508,7 @@
             const now = new Date();
             for (let i = 12; i >= 0; i--) {
                 const t = new Date(now.getTime() - i * 30 * 60 * 1000);
-                // Subtiele natuurlijke variatie toevoegen zodat het nooit een rechte lijn wordt
-                const randomVariation = (Math.sin(i / 2) * 0.5) + (Math.random() * 0.2 - 0.1);
+                const randomVariation = (Math.sin(i / 2) * 0.4) + (Math.random() * 0.2 - 0.1);
                 history.push({
                     time: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     timestamp: t.getTime(),
@@ -522,7 +521,6 @@
         function getStoredHistory(sensorId, baseDp) {
             try {
                 let history = JSON.parse(localStorage.getItem(`hist_${sensorId}`)) || [];
-                // Als de opgeslagen historie leeg is of bestaat uit een rechte lijn, verversen we hem automatisch
                 if (history.length === 0 || history.every(h => h.dp === history[0].dp)) {
                     history = generateFallbackHistory(baseDp);
                     localStorage.setItem(`hist_${sensorId}`, JSON.stringify(history));
@@ -647,7 +645,8 @@
         }
 
         function renderGoveeCard(sensor) {
-            const dp = calculateDewPoint(sensor.temp, sensor.humidity);
+            // Neem het dauwpunt rechtstreeks over van het meest recente punt in de grafiek/historie
+            const dp = sensor.history.length > 0 ? sensor.history[sensor.history.length - 1].dp : calculateDewPoint(sensor.temp, sensor.humidity);
             let threshold = config.frostMode ? 5.0 : 11.5;
             let isCrit = dp > threshold;
 
@@ -760,7 +759,7 @@
             let threshold = config.frostMode ? 5.0 : 11.5;
 
             sensors.forEach(s => {
-                const dp = calculateDewPoint(s.temp, s.humidity);
+                const dp = s.history.length > 0 ? s.history[s.history.length - 1].dp : calculateDewPoint(s.temp, s.humidity);
                 if (dp > maxDpIn) {
                     maxDpIn = dp;
                     worstSensorName = s.name;
@@ -775,7 +774,7 @@
                 });
             }, 50);
 
-            const worstSensor = sensors.find(s => calculateDewPoint(s.temp, s.humidity) === maxDpIn) || sensors[0];
+            const worstSensor = sensors.find(s => (s.history.length > 0 ? s.history[s.history.length - 1].dp : calculateDewPoint(s.temp, s.humidity)) === maxDpIn) || sensors[0];
             const absIn = calculateAbsoluteHumidity(worstSensor.temp, worstSensor.humidity);
             const absOut = calculateAbsoluteHumidity(tOut, hOut);
             const diff = absIn - absOut;
