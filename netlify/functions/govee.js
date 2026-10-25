@@ -3,6 +3,7 @@ exports.handler = async function(event, context) {
     if (!apiKey) {
         return {
             statusCode: 500,
+            headers: { 'Cache-Control': 'no-store' },
             body: JSON.stringify({ error: 'GOVEE_API_KEY niet ingesteld' })
         };
     }
@@ -25,12 +26,12 @@ exports.handler = async function(event, context) {
                 rawName = 'Badkamer';
             }
 
-            let t = 19.5; // Veilige fallback temperatuur in Celsius
-            let h = 60.0; // Veilige fallback luchtvochtigheid
+            let t = null;
+            let h = null;
 
             try {
                 const bodyData = {
-                    requestId: "req_" + Date.now(),
+                    requestId: "req_" + Date.now() + "_" + Math.random(),
                     payload: {
                         sku: sku,
                         device: deviceId
@@ -53,11 +54,11 @@ exports.handler = async function(event, context) {
                         if (inst.includes('temp')) {
                             let numVal = Number(val);
                             if (numVal > 200) {
-                                t = numVal / 100; // Centi-degrees naar Celsius
+                                t = numVal / 100;
                             } else if (numVal > 45) {
-                                t = (numVal - 32) * 5 / 9; // Fahrenheit naar Celsius omrekenen
+                                t = (numVal - 32) * 5 / 9;
                             } else {
-                                t = numVal; // Al direct Celsius
+                                t = numVal;
                             }
                         }
                         if (inst.includes('humid') || inst.includes('moisture')) {
@@ -72,19 +73,25 @@ exports.handler = async function(event, context) {
             sensors.push({
                 id: deviceId,
                 name: rawName,
-                temp: Number(t.toFixed(1)),
-                humidity: Number(h.toFixed(1))
+                temp: t !== null ? Number(t.toFixed(1)) : 19.5,
+                humidity: h !== null ? Number(h.toFixed(1)) : 60.0
             });
         }
 
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            },
             body: JSON.stringify(sensors)
         };
     } catch (error) {
         return {
             statusCode: 500,
+            headers: { 'Cache-Control': 'no-store' },
             body: JSON.stringify({ error: error.message })
         };
     }
