@@ -21,7 +21,6 @@ exports.handler = async function(event, context) {
             const sku = dev.sku;
             
             try {
-                // Govee vereist een POST-aanvraag met body om de status op te vragen
                 const bodyData = {
                     requestId: "req_" + Date.now(),
                     payload: {
@@ -38,23 +37,16 @@ exports.handler = async function(event, context) {
                 const stateData = await stateResponse.json();
                 
                 let t = 20, h = 50;
-                let capabilities = [];
-                if (stateData?.payload?.capabilities) capabilities = stateData.payload.capabilities;
-                else if (stateData?.data?.capabilities) capabilities = stateData.data.capabilities;
-                else if (Array.isArray(stateData?.capabilities)) capabilities = stateData.capabilities;
+                let capabilities = stateData?.payload?.capabilities || stateData?.data?.capabilities || stateData?.capabilities || [];
 
                 for (let cap of capabilities) {
-                    let val = undefined;
-                    if (cap?.state?.value !== undefined) val = cap.state.value;
-                    else if (cap?.value !== undefined) val = cap.value;
-                    else if (cap?.parameters?.value !== undefined) val = cap.parameters.value;
-
+                    let val = cap?.state?.value ?? cap?.value ?? cap?.parameters?.value;
                     if (val !== undefined) {
                         const inst = (cap.instance || cap.type || '').toLowerCase();
-                        if (inst.includes('temperature') || inst.includes('sensortemperature')) {
+                        if (inst.includes('temp')) {
                             t = val > 60 ? val / 100 : val;
                         }
-                        if (inst.includes('humidity') || inst.includes('sensorhumidity')) {
+                        if (inst.includes('humid') || inst.includes('moisture')) {
                             h = val > 100 ? val / 100 : val;
                         }
                     }
@@ -69,7 +61,8 @@ exports.handler = async function(event, context) {
                     id: deviceId,
                     name: rawName,
                     temp: t,
-                    humidity: h
+                    humidity: h,
+                    rawState: stateData // Dit voegt de ruwe Govee-data toe om te kunnen bekijken
                 });
             } catch (err) {
                 console.error(`Fout bij ophalen status voor apparaat ${deviceId}:`, err);
