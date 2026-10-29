@@ -15,15 +15,21 @@ exports.handler = async function(event, context) {
         const devData = await devResponse.json();
         
         let sensors = [];
-        let devicesList = devData?.data || devData?.payload?.devices || [];
+        let devicesList = devData?.data?.devices || devData?.data || devData?.payload?.devices || [];
 
         for (let dev of devicesList) {
             const deviceId = dev.device;
             const sku = dev.sku;
             let rawName = dev.deviceName || dev.name || 'Govee Sensor';
             
-            if (rawName.toLowerCase().includes('bouwmuur') || rawName.toLowerCase().includes('kier')) {
+            // Naam-mapping op basis van jullie werkelijke Govee sensornamen
+            let lowerName = rawName.toLowerCase();
+            if (lowerName.includes('bouwmuur') || lowerName.includes('kier') || lowerName.includes('badkamer')) {
                 rawName = 'Badkamer';
+            } else if (lowerName.includes('slaap')) {
+                rawName = 'Slaapkamer';
+            } else if (lowerName.includes('woon')) {
+                rawName = 'Woonkamer';
             }
 
             let t = null;
@@ -50,9 +56,10 @@ exports.handler = async function(event, context) {
                 for (let cap of capabilities) {
                     let val = cap?.state?.value ?? cap?.value ?? cap?.parameters?.value;
                     if (val !== undefined && val !== null && val !== '' && !isNaN(val)) {
+                        let numVal = Number(val);
                         const inst = (cap.instance || cap.type || '').toLowerCase();
+                        
                         if (inst.includes('temp')) {
-                            let numVal = Number(val);
                             if (numVal > 200) {
                                 t = numVal / 100;
                             } else if (numVal > 45) {
@@ -62,7 +69,7 @@ exports.handler = async function(event, context) {
                             }
                         }
                         if (inst.includes('humid') || inst.includes('moisture')) {
-                            h = Number(val) > 100 ? Number(val) / 100 : Number(val);
+                            h = numVal > 100 ? numVal / 100 : numVal;
                         }
                     }
                 }
